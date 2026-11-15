@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   consent_version VARCHAR(30) NOT NULL DEFAULT '1.0',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   CONSTRAINT fk_profiles_user FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_profiles_organization FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  CONSTRAINT fk_profiles_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   CONSTRAINT chk_profile_role CHECK (role IN ('respondent','admin')),
   CONSTRAINT chk_profile_experience CHECK (experience_years IS NULL OR experience_years BETWEEN 0 AND 80),
   CONSTRAINT chk_profile_risk_experience CHECK (risk_experience_years IS NULL OR risk_experience_years BETWEEN 0 AND 80),

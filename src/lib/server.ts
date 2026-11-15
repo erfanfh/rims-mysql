@@ -7,7 +7,7 @@ const scrypt=promisify(scryptCallback);
 const SESSION_COOKIE='rims_session';
 const SESSION_TTL_SECONDS=60*60*24*7;
 type AppUser={id:string;username:string|null;created_at:Date|string};
-type Profile=RowDataPacket & {id:string;organization_id:string;role:'admin'|'respondent';full_name:string;job_title:string;specialization:string|null;experience_years:number|null;risk_experience_years:number|null;erm_familiarity:string|null;consent_at:Date|string;consent_version:string;created_at:Date|string};
+type Profile=RowDataPacket & {id:string;organization_id:string|null;role:'admin'|'respondent';full_name:string;job_title:string;specialization:string|null;experience_years:number|null;risk_experience_years:number|null;erm_familiarity:string|null;consent_at:Date|string;consent_version:string;created_at:Date|string};
 
 declare global {var __rimsMysqlPool:Pool|undefined}
 export function dbPool():Pool{
