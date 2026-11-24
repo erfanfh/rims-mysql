@@ -10,12 +10,42 @@ export const DIMENSIONS=[
 ] as const;
 export type DimensionKey=(typeof DIMENSIONS)[number]['key'];
 export type ScoreInput=Record<string,number>;
+export function dimensionAverage(ids:readonly string[],answers:ScoreInput):number|null{
+ const vals=ids.map(id=>answers[id]);
+ return !vals.length||vals.some(v=>!Number.isInteger(v)||v<1||v>5)?null:vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+export const TARGET_DIMENSIONS=DIMENSIONS.map((dimension,i)=>({dimension,targetId:`target-${i+1}`}));
+export function scoresFromIndices(indices:ScoreInput):ScoreInput{
+ return Object.fromEntries(Object.entries(indices).map(([id,index])=>[id,Number.isInteger(index)&&index>=0&&index<=4?index+1:NaN]));
+}
+export function availableTargetIndices(average:number|null):number[]{
+ return average===null?[]:[0,1,2,3,4].filter(index=>index+1>average);
+}
+export function targetState(targetId:string,indices:ScoreInput){
+ const entry=TARGET_DIMENSIONS.find(d=>d.targetId===targetId);
+ if(!entry)throw Error('Unknown target');
+ const average=dimensionAverage(entry.dimension.questionIds,scoresFromIndices(indices));
+ const available=availableTargetIndices(average);
+ return {average,available,ceiling:average===5};
+}
+export function validTarget(targetId:string,indices:ScoreInput,index:number){
+ const state=targetState(targetId,indices);
+ return state.available.includes(index)||(state.ceiling&&index===4);
+}
+export function reconcileTargets(indices:ScoreInput):ScoreInput{
+ const result={...indices};
+ for(const {targetId} of TARGET_DIMENSIONS){
+  const state=targetState(targetId,result);
+  if(state.ceiling)result[targetId]=4;
+  else if(!validTarget(targetId,result,result[targetId]))delete result[targetId];
+ }
+ return result;
+}
 export function calculateScores(answers:ScoreInput){
  const dimensions=DIMENSIONS.map(d=>{
-  const vals=d.questionIds.map(id=>answers[id]);
-  if(vals.some(v=>!Number.isInteger(v)||v<1||v>5))throw Error(`Missing or invalid response in ${d.key}`);
-  const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
-  return {key:d.key,label:d.label,itemCount:vals.length,average:mean,weighted:mean*d.weight,weight:d.weight};
+  const mean=dimensionAverage(d.questionIds,answers);
+  if(mean===null)throw Error(`Missing or invalid response in ${d.key}`);
+  return {key:d.key,label:d.label,itemCount:d.questionIds.length,average:mean,weighted:mean*d.weight,weight:d.weight};
  });
  return {dimensions,total:dimensions.reduce((s,d)=>s+d.weighted,0)};
 }
