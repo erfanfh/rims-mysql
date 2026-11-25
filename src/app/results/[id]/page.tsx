@@ -342,6 +342,11 @@ export default function Results(){
 
       </>}
 
+      {questionnaire.categories.some(c=>c.questions.some(q=>q.type==='target'&&data.targetFeedback?.[q.id]))&&<div className="card mt-6">
+        <h2 className="h3 mb-4">توضیحات پاسخ‌دهنده درباره سطح بلوغ محاسبه‌شده</h2>
+        {questionnaire.categories.flatMap(c=>c.questions.filter(q=>q.type==='target'&&data.targetFeedback?.[q.id]).map(q=><div key={q.id} className="border-b last:border-0 py-3"><strong className="text-sm">{c.title.split(' (')[0]}</strong><p className="text-sm whitespace-pre-wrap break-words mt-2">{data.targetFeedback[q.id]}</p></div>))}
+      </div>}
+
     </div>
   );
 }

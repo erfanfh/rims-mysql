@@ -13,7 +13,7 @@ const header=(ws:ExcelJS.Worksheet,labels:string[])=>{
  ws.addRow(labels);ws.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF194E49'}};
  ws.views=[{state:'frozen',ySplit:1}];ws.autoFilter={from:'A1',to:{row:1,column:labels.length}};ws.columns=labels.map(l=>({width:Math.min(42,Math.max(15,l.length+5))}));
 };
-async function all(table:string){const allowed=new Set(['organizations','profiles','assessments','answers','questions','dimension_scores','maturity_results']);if(!allowed.has(table))throw new Error('Invalid table');const rows=await query<RowDataPacket[]>(`SELECT * FROM \`${table}\` LIMIT 120001`);if(rows.length>120000)throw new HttpError('حجم داده بسیار بزرگ است؛ خروجی مرحله‌ای لازم است.',413);return rows;}
+async function all(table:string){const allowed=new Set(['organizations','profiles','assessments','answers','questions','target_feedback','dimension_scores','maturity_results']);if(!allowed.has(table))throw new Error('Invalid table');const rows=await query<RowDataPacket[]>(`SELECT * FROM \`${table}\` LIMIT 120001`);if(rows.length>120000)throw new HttpError('حجم داده بسیار بزرگ است؛ خروجی مرحله‌ای لازم است.',413);return rows;}
 export async function GET(req:NextRequest){try{
  const {user}=await requireAdmin(req);const identifiable=req.nextUrl.searchParams.get('identifiable')==='1';const orgId=req.nextUrl.searchParams.get('organizationId')||'';
  if(orgId&&!/^[0-9a-f-]{36}$/i.test(orgId))throw new HttpError('شناسه سازمان نادرست است.',400);
@@ -34,6 +34,7 @@ export async function GET(req:NextRequest){try{
  add('Maturity_Results',['assessment_id','total_score','tier_or_blank','ruleset_id','algorithm_version','calculated_at'],fr.map((r:any)=>[r.assessment_id,Number(r.total_score),r.tier,r.scoring_rules_id,r.algorithm_version,r.calculated_at]));
  const rawByAssessment=new Map<string,Map<string,number>>();for(const r of fs){const m=rawByAssessment.get(r.assessment_id)??new Map();m.set(r.question_id,r.selected_index+1);rawByAssessment.set(r.assessment_id,m);}
  const dimByAssessment=new Map<string,Map<string,number>>();for(const r of fds){const m=dimByAssessment.get(r.assessment_id)??new Map();m.set(r.dimension_key,Number(r.average_score));dimByAssessment.set(r.assessment_id,m);}
+ if(identifiable){const feedback=(await all('target_feedback')).filter(r=>aIds.has(r.assessment_id));add('Target_Feedback',['assessment_id','question_id','reason','updated_at'],feedback.map(r=>[r.assessment_id,r.question_id,r.reason,r.updated_at]));}
  const resultMap=new Map(fr.map((r:any)=>[r.assessment_id,r]));const questionCols=Array.from({length:37},(_,i)=>`q${i+1}`);const targetCols=Array.from({length:5},(_,i)=>`target-${i+1}`);const dimensionCols=DIMENSIONS.map(d=>`score_${d.key}`);
  const wideRows=filteredAssessments.map((a:any)=>{const ans=rawByAssessment.get(a.id),dim=dimByAssessment.get(a.id),res:any=resultMap.get(a.id);return [a.id,a.respondent_id,a.organization_id,a.status,...questionCols.map(q=>ans?.get(q)),...targetCols.map(q=>ans?.get(q)),...dimensionCols.map(q=>dim?.get(q.replace('score_',''))),res?.total_score!==undefined?Number(res.total_score):null,res?.tier??null];});
  add('SPSS_Data',['assessment_id','respondent_id','organization_id','status',...questionCols,...targetCols,...dimensionCols,'M_total','tier'],wideRows);
